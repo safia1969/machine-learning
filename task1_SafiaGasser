@@ -1,0 +1,100 @@
+import numpy as np, pandas as pd, seaborn as sns, matplotlib.pyplot as plt
+from sklearn.datasets import make_blobs
+from sklearn.datasets import make_moons
+from sklearn.cluster import KMeans
+k=3
+K_means = pd.read_csv("Customer data.csv")
+[row_1,col_1]=np.shape(K_means)
+NewKmeans=K_means.iloc[:,1:col_1]
+Customer_Data=pd.DataFrame(NewKmeans).to_numpy()
+[row_2,col_2]=np.shape(Customer_Data)
+Centroids=K_means.iloc[0:k,1:col_1] 
+New_Centroids=pd.DataFrame(Centroids).to_numpy()
+MatrixCentroids=np.zeros([row_2,col_2])
+MatrixCentroids[0:k,0:col_1]=New_Centroids
+Distance_Ecl=np.zeros([row_2,k])
+Distance_Type='Eucledian distance'
+Cluster_Distance=np.zeros((row_2,k))
+Centroids_random=Customer_Data[np.random.choice(row_2,k,replace=False)]
+def GUC_Distance ( Centroids_random, Customer_Data, Distance_Type ):
+    if(Distance_Type == 'Eucledian distance'):
+        for i in range(k):    
+            Distance_Ecl[:,i] = ((Customer_Data-Centroids_random[i])**2).sum(axis=1)
+            Cluster_Distance=Distance_Ecl           
+    else:
+        Cluster_Distance=np.corrcoef(Centroids_random[0:k,:],Customer_Data) 
+    return Cluster_Distance
+def GUC_Kmean (Customer_Data,k, Distance_Type ):
+    Centroids_random=Customer_Data[np.random.choice(row_2,k,replace=False)]
+    while True:
+        closest=np.zeros(row_2).astype(int)
+        old_closest=closest.copy()
+        if(Distance_Type=='Eucledian distance'):
+            distance=GUC_Distance(Centroids_random,Customer_Data,'Eucledian distance')
+        else:
+            distance=GUC_Distance(Centroids_random,Customer_Data,'Pearson correlation distance')
+        closest=np.argmin(distance,axis=1)
+        for i in range(k):
+            Centroids_random[i,:]=Customer_Data[closest==i].mean(axis=0)
+            Distortion_Fn=(1/row_2)*np.sum(Customer_Data-np.resize(Centroids_random,(row_2,col_2)))*2
+            plt.plot(Distortion_Fn,k)
+            if(Distance_Type=='Eucledian distance'):
+                Final_Cluster_distance=GUC_Distance(Centroids_random,Customer_Data,'Eucledian distance')
+            else:
+                Final_Cluster_distance=GUC_Distance(Centroids_random,Customer_Data,'Pearson correlation distance')
+        if any(closest==old_closest):
+            break
+    return  Final_Cluster_distance,Distortion_Fn
+Result=GUC_Kmean (Customer_Data,k,'Eucledian distance')
+kmeans = KMeans(n_clusters=k)
+kmeans.fit(Customer_Data)
+def display_cluster(X,km=[],num_clusters=0):
+    color = 'brgcmyk' #List colors
+    alpha = 0.5 #color obaque
+    s = 20
+    if num_clusters == 0:
+        plt.scatter(X[:,0],X[:,1],c = color[0],alpha = alpha,s = s)
+    else:
+        for i in range(num_clusters):
+            plt.scatter(X[kmeans.labels_==i,0],X[kmeans.labels_==i,1],c = color[i],alpha = alpha,s=s)
+            plt.scatter(kmeans.cluster_centers_[i][0],kmeans.cluster_centers_[i][1],c = color[i], marker = 'x', s = 100)
+
+plt.rcParams['figure.figsize'] = [8,8]
+sns.set_style("whitegrid")
+sns.set_context("talk")
+angle = np.linspace(0,2*np.pi,20, endpoint = False)
+X = np.append([np.cos(angle)],[np.sin(angle)],0).transpose()
+l=display_cluster(X)
+k_means_customer_data=GUC_Kmean(Customer_Data,k,'Eucledian distance' )
+kmeans = KMeans(n_clusters=k)
+kmeans.fit(Customer_Data)
+def display_cluster(X,km=[],num_clusters=0):
+    color = 'brgcmyk' #List colors
+    alpha = 0.5 #color obaque
+    s = 20
+    if num_clusters == 0:
+        plt.scatter(X[:,0],X[:,1],c = color[0],alpha = alpha,s = s)
+    else:
+        for i in range(num_clusters):
+            
+            plt.scatter(X[kmeans.labels_==i,0],X[kmeans.labels_==i,1],c = color[i],alpha = alpha,s=s)
+            plt.scatter(kmeans.cluster_centers_[i][0],kmeans.cluster_centers_[i][1],c = color[i]
+, marker = 'x', s = 100)
+
+o=display_cluster(Customer_Data,km=[],num_clusters=k)
+plt.rcParams['figure.figsize'] = [8,8]
+sns.set_style("whitegrid")
+sns.set_context("talk")
+angle = np.linspace(0,2*np.pi,20, endpoint = False)
+X = np.append([np.cos(angle)],[np.sin(angle)],0).transpose()
+l=display_cluster(X)
+n_samples = 1000
+n_bins = 4
+centers = [(-3, -3), (0, 0), (3, 3), (6, 6), (9,9)]
+X, y = make_blobs(n_samples=n_samples, n_features=7, cluster_std=1.0,
+centers=centers, shuffle=False, random_state=42)
+n_samples = 1000
+X, y = noisy_moons = make_moons(n_samples=n_samples, noise= .1)
+a=display_cluster(X)
+k_means_Examples= GUC_Kmean (np.resize(X,(row_2,col_2)),k,'Eucledian distance' )
+    
