@@ -1,0 +1,124 @@
+
+import numpy as np, pandas as pd, seaborn as sns, matplotlib.pyplot as plt
+from sklearn.datasets import make_blobs
+from sklearn.datasets import make_moons
+from sklearn.cluster import KMeans
+Customer_data = pd.read_csv("Customer data.csv")
+[users,feat]=np.shape(Customer_data)
+Customer_data_NO_ID=pd.DataFrame(Customer_data.iloc[:,1:feat]).to_numpy()
+k_temp=5
+
+# Centroids_temp=pd.DataFrame(Customer_data.iloc[0:k_temp,1:feat]).to_numpy()
+# Dis_Ec=np.zeros([users,k_temp])
+Centroids_temp=Customer_data_NO_ID[np.random.choice(users,k_temp,replace=False)]
+def GUC_Distance ( Cluster_Centroids, Data_points, Distance_Type ):
+    # Centroids_temp=pd.DataFrame(Customer_data.iloc[0:k_temp,1:feat]).to_numpy()
+    # print( Centroids_temp)
+    av_centroids=np.zeros([k_temp,1])
+    av_CustData=np.zeros([users,1])
+    Dis_Ec=np.zeros([users,])
+    Dis_Ec=np.zeros([users,k_temp]) 
+    Nw_CustData=np.zeros([users,1])
+    Nw_centroids=np.zeros([k_temp,1])
+    subt_centroids=np.zeros([k_temp,feat-1])#(x-xdash)
+    subt_CustData=np.zeros([users,feat-1])
+    num=np.zeros([users,k_temp])
+    den=np.zeros([users,k_temp])
+    if Distance_Type== 'Eclidean':
+        for i in range(k_temp):    
+            Dis_Ec[:,i] = ((Customer_data_NO_ID-Cluster_Centroids[i])**2).sum(axis=1)
+    else:
+        
+        av_centroids=np.average(Centroids_temp,axis=1)
+        av_CustData=np.average(Data_points,axis=1)
+       
+        for k in range(users): 
+            subt_CustData[k]=Data_points[k]-av_CustData[k]
+       
+        # print(subt_CustData)
+        # print(np.shape(subt_CustData))
+        for k in range(k_temp):  
+            subt_centroids[k]=Centroids_temp[k]-av_centroids[k]
+        
+        # subt_centroids=Centroids_temp-av_centroids
+        # print(subt_centroids)
+        # print(np.shape(subt_centroids))
+        for row in range (users):
+            Nw_CustData[row]=((Data_points[row]-av_CustData[row])**2).sum()
+        for row1 in range (k_temp):
+            Nw_centroids[row1]=((Centroids_temp[row1]-av_centroids[row1])**2).sum()
+        for u in range(k_temp):
+            for j in range(users): 
+                num[j,u]=(subt_CustData[j]*subt_centroids[u]).sum()
+                den[j,u]=np.sqrt(Nw_CustData[j]*Nw_centroids[u])
+        Dis_Ec=1-(num/den)
+        print(Dis_Ec)
+        print(np.shape(Dis_Ec))
+        
+
+    return Dis_Ec
+Centroids_temp_random=Customer_data_NO_ID[np.random.choice(users,k_temp,replace=False)]
+# distance=GUC_Distance(Centroids_temp_random,Customer_data_NO_ID, 'bzngan')#test
+def GUC_Kmean ( Customer_data_NO_ID, Number_of_Clusters, Distance_Type ):
+    k_temp=Number_of_Clusters
+    J_min=0
+    best_fit_centroids=np.zeros([users,k_temp])
+    J=0 #distortion
+    J_prev=-1
+    users_per_cluster=np.zeros([k_temp])
+    sum_user_per_cl=np.zeros([k_temp,feat-1])
+    for u in range (100):
+        Centroids_temp_random=Customer_data_NO_ID[np.random.choice(users,k_temp,replace=False)]
+        while True:
+            Distance_diff=GUC_Distance(Centroids_temp_random,Customer_data_NO_ID, 'Eclidean' )
+            Minimum_dist=np.argmin(Distance_diff,axis=1)
+            mindist=np.min(Distance_diff,axis=1)
+            for clust_no in range(k_temp):
+                for j in range(users):
+                    if Minimum_dist[j]==clust_no:
+                        users_per_cluster[clust_no]=users_per_cluster[clust_no]+1
+                        sum_user_per_cl[clust_no]=sum_user_per_cl[clust_no]+Customer_data_NO_ID[j]
+                        J=J+((((Customer_data_NO_ID[j]-Centroids_temp_random[clust_no])**2)).sum())
+        
+                sum_user_per_cl[clust_no]=sum_user_per_cl[clust_no]/users_per_cluster[clust_no]
+                J=J/users
+            if J==J_prev:
+                break
+            else:
+                J_prev=J
+            if u==0:
+                J_min=J 
+            if J<J_min:
+                J_min=J
+                Centroids_temp_random=sum_user_per_cl
+            
+            return [mindist, J_min,Minimum_dist]
+            
+
+
+
+
+(Euc,cost,m)=GUC_Kmean(Customer_data_NO_ID, k_temp, 'Ecledian')
+df = pd.DataFrame(dict(x=Customer_data_NO_ID[:,2], y=Customer_data_NO_ID[:,4], label=m.astype(int)))
+colors = {0:'blue', 1:'orange', 2:'green',3:'red',4:'olive',5:'yellow',6:'pink'}
+fig, ax = plt.subplots(figsize=(8, 8))
+grouped = df.groupby('label')
+for key, group in grouped:
+    group.plot(ax=ax, kind='scatter', x='x', y='y', label=key, color=colors[key])
+ax.scatter(Centroids_temp_random[:, 2],Centroids_temp_random[:, 4], marker='*', s=150, c='#ff2222')
+plt.xlabel('X_1')
+plt.ylabel('X_2')
+plt.show()
+# display_cluster(Customer_data_NO_ID,dis,Centroids_temp_random,3)
+
+wcss_list=[]
+#Using for loop for iterations from 1 to 10. 
+for i in range(1, 11): 
+    kmeans = KMeans(n_clusters=i, init='k-means++', random_state= 42) 
+    kmeans.fit(Customer_data_NO_ID) 
+    wcss_list.append(kmeans.inertia_) 
+plt.plot(range(1, 11), wcss_list) 
+plt.title('The Elobw Method Graph') 
+plt.xlabel('Number of clusters(k)') 
+plt.ylabel('wcss_list') 
+plt.show()
